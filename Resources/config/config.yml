@@ -1,0 +1,17 @@
+snc_redis:
+  clients:
+    default:
+      type: predis
+      alias: default
+      dsn: redis://localhost
+  session:
+    client: default
+    prefix: propelsession
+
+framework:
+  session:
+    name: 'session'
+
+fos_rest:
+    param_fetcher_listener: true
+    body_listener: true

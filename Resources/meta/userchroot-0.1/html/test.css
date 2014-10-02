@@ -1,0 +1,142 @@
+/**
+ * Copyright 2006 Aleksandr Koltsoff (czr@iki.fi)
+ *
+ * Unauthorized use prohibited.
+ */
+
+body {
+  /* background color for the whole page */
+  background: white;
+  color: black;
+  margin-right: 20px;
+  margin-left: 20px;
+  font-size: 90%;
+}
+
+pre.code {
+  border: 1px solid #cccccc;
+  background-color: #f5f5f5;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-left: 2px;
+  margin-right: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* for w3 icons */
+img.w3 {
+  border: 0;
+  height: 31px;
+  width: 88px;
+}
+
+span.linenum {
+  font-size: 70%;
+  color: #707070;
+}
+
+span.spacing {
+  /* font-size: 70%; */
+  color: #505050;
+}
+
+
+/* reflinks */
+a.reflink:link, a.reflink:visited {
+  text-decoration: none;
+  border-bottom-style: dotted;
+  /*border-style: dotted;*/
+  border-width: thin;
+  font-weight: normal;
+  color: #255ad1;
+}
+a.reflinkDepr:link, a.reflinkDepr:visited {
+  text-decoration: none;
+  border-bottom-style: dotted;
+  border-width: thin;
+  font-weight: normal;
+  color: #d12242;
+}
+a.reflinkInt:link, a.reflinkInt:visited {
+  text-decoration: none;
+  border-bottom-style: dotted;
+/*  border-bottom-style: solid;*/
+  border-width: thin;
+  font-weight: normal;
+  color: #12644e;
+/*  color: #255ad1;*/
+}
+
+/* this is a special when doing ranged fragments and the reflink target is not
+   present in the same fragment */
+span.reflinkInt {
+  font-weight: normal;
+  color: #12644e;
+}
+
+/* DOCSE TAGS */
+span.COMMENT {
+  font-style: italic;
+  color: #685800;
+}
+
+span.CPP {
+  color: #0049ee;
+}
+
+span.KEYWORD {
+  font-weight: bold;
+  color: #c9a100;
+}
+
+span.TYPE {
+  color: #aa00b9;
+}
+
+span.STRING {
+  font-style: italic;
+  font-weight: bold;
+  color: #108f00;
+}
+
+span.FUNCTIONNAME {
+  font-weight: bold;
+  color: black;
+}
+
+/* goto labels */
+span.REFERENCE {
+  font-style: italic;
+}
+
+/* manual pre-block fragments */
+span.USERINPUT {
+  font-weight: bold;
+  color: black;
+}
+
+/* program names */
+span.PROGNAME {
+  font-family: monospace;
+}
+
+/* environmental variables */
+span.ENVVAR {
+  font-family: monospace;
+  font-weight: bold;
+  /*color: black;*/
+}
+
+/* file paths, file names */
+span.PATH {
+  font-weight: bold;
+  /*color: black;*/
+}
+
+/* listing captions */
+span.listing {
+  font-style: italic;
+}

@@ -1,0 +1,8 @@
+services:
+     propelsandbox.listener:
+        class: PropelSandbox\EventListener\ViewListener
+        tags:
+            - { name: kernel.event_listener, event: kernel.view }
+     propelsandbox.executor:
+        class: PropelSandbox\Executor\Executor
+        arguments: ['@snc_redis.default', '@database_connection', %kernel.root_dir%/../vendor]

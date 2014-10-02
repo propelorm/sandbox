@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html ng-app="propelFiddle" ng-controller="MainController as mainController">
+<head>
+    <title>{{ '{{pageTitle}}' }}PropelFiddle</title>
+    <base href="{{ asset('') }}">
+    <meta name="language" content="en">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <link rel="shortcut icon" href="{{ asset('bundles/propelsandbox/images/favicon.ico') }}" type="image/x-icon">
+    <meta content='width=device-width' name='viewport'>
+    <meta name="viewport" content="initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ asset('bundles/propelsandbox/css/layout.css') }}">
+    <link rel="stylesheet" href="{{ asset('bundles/propelsandbox/libs/codemirror/lib/codemirror.css') }}">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:300,400' rel='stylesheet' type='text/css'>
+    <script src="{{ asset('bundles/propelsandbox/libs/angular/angular.min.js') }}"></script>
+
+    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/lib/codemirror.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/xml/xml.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/htmlmixed/htmlmixed.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/clike/clike.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/php/php.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/angular-ui-codemirror/ui-codemirror.min.js') }}"></script>
+
+    <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap.min.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap-tpls.min.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/libs/traceur-runtime/traceur-runtime.min.js') }}"></script>
+    <script src="{{ asset('bundles/propelsandbox/build/app.js') }}"></script>
+    <script>
+        window._baseUrl = {{app.request.getBaseURL()|json_encode|raw}};
+        window.config = {{config|json_encode|raw}}
+        window.model = {{model|json_encode|raw}}
+    </script>
+</head>
+{% verbatim %}
+<body >
+    <nav>
+        <header>
+            <img ng-src="bundles/propelsandbox/images/propel-logo.png"/>
+        </header>
+        <section>
+            <select ng-model="model.example">
+                <option selected value="">-- Select Template --</option>
+                <!--<option ng-repeat="example in mainController.examples | toArray" value="{{example.$key}}">-->
+                    <!--{{example.label}}-->
+                <!--</option>-->
+            </select>
+            <p>
+                Your fiddles:
+            </p>
+            <a ng-repeat="fiddle in myFiddles" ng-click="mainController.load(fiddle.id)">{{fiddle.title}}</a>
+
+            <p>
+                Found issues? <a href="" target="_blank">Create a issue</a>.
+            </p>
+        </section>
+    </nav>
+    <div class="app">
+        <div class="app-actions">
+            <button ng-click="mainController.newFiddle()">New</button>
+            <button ng-click="mainController.forkFiddle()">Fork</button>
+            <button ng-click="mainController.run()">Save & Run</button>
+        </div>
+        <div class="app-title">
+            <input placeholder="Enter a Title ..." ng-model="model.title" type="text" />
+        </div>
+        <div class="app-left">
+            <div class="app-left-top" ng-class="{'not-editable': !mainController.editable}">
+                <ui-codemirror ui-codemirror-opts="schemaCodemirrorOptions" ng-model="model.schema"></ui-codemirror>
+            </div>
+            <div class="app-left-bottom">
+                <tabset>
+                    <tab ng-repeat="table in fiddle.databaseInformation" heading="{{table.name}} ({{table.count}})">
+                        <table class="table table-hover" width="100%" ng-if="table.items">
+                            <thead>
+                                <tr>
+                                    <th ng-repeat="column in table.columns">{{column}}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="row in table.items">
+                                   <td ng-repeat="column in table.columns">{{row[column]}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </tab>
+                </tabset>
+            </div>
+        </div>
+        <div class="app-right">
+            <div class="app-right-top" ng-class="{'not-editable': !mainController.editable}">
+                <ui-codemirror ui-codemirror-opts="phpCodemirrorOptions" ng-model="model.php"></ui-codemirror>
+            </div>
+            <div class="app-right-bottom">
+                <tabset>
+                    <tab heading="Script ({{fiddle.scriptOutput.time*1000|number: 0}}ms)">
+                        <div class="output" ng-bind="fiddle.scriptOutput.output"></div>
+                        <div class="error" ng-bind="fiddle.scriptOutput.error"></div>
+                    </tab>
+                    <tab heading="Model ({{fiddle.modelBuildOutput.time*1000|number: 0}}ms)">
+                        <div class="output" ng-bind="fiddle.modelBuildOutput.output"></div>
+                        <div class="error" ng-bind="fiddle.modelBuildOutput.error"></div>
+                    </tab>
+                    <tab heading="SQL ({{fiddle.sqlBuildOutput.time*1000|number: 0}}ms)">
+                        <div class="output" ng-bind="fiddle.sqlBuildOutput.output"></div>
+                        <div class="error" ng-bind="fiddle.sqlBuildOutput.error"></div>
+                    </tab>
+                    <tab heading="Insert ({{fiddle.sqlInsertOutput.time*1000|number: 0}}ms)">
+                        <div class="output" ng-bind="fiddle.sqlInsertOutput.output"></div>
+                        <div class="error" ng-bind="fiddle.sqlInsertOutput.error"></div>
+                    </tab>
+                </tabset>
+            </div>
+        </div>
+        <div ng-if="loading" class="loading">
+            Loading ...
+        </div>
+    </div>
+</body>
+{% endverbatim %}
+</html>

@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+          PUBLIC "-//W3C/DTD XHTML 1.0 Strict//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <title>UserCHRoot - Switch root, change directory, drop privileges and exec</title>
+  <link href="test.css" rel="stylesheet" type="text/css" media="screen"/>
+</head>
+<body>
+
+<div id="title">
+<h1>UserCHRoot - Switch root, change directory, drop privileges and exec</h1>
+<p>Copyright 2007 Aleksandr Koltsoff</p>
+</div>
+
+<div>
+<h2 id="toc1">Introduction</h2>
+<p>When dealing with chroot environments, it's sometimes useful to have a tool with which the chroot will be done, but the target executable will not be run using root privileges. It is also sometimes useful to switch the current working directory for the target executable just before it starts. <span class="PROGNAME">userchroot</span> is a small program intended to be run as suid (u+s root) in these cases. It tries to be as careful as possible in order not to run the target executable as root user. It does not support arbitrary user specification, but instead will drop back to normal user privileges of the calling user (undoing what suid-bit has done basically). If dropping root privilege fails (or actually resetting the effective credentials to the normal ones), the target executable will not be executed.</p>
+<p><span class="PROGNAME">userchroot</span> has been tested on Linux, implemented using C and licensed under GNU General Public License (v2). The tool is provided without a warranty of any kind, in the understanding that software bugs do exist and bad things can happen.</p>
+</div>
+
+<div>
+<h2>Table of contents</h2><ul class="toc">
+<li class="toc"><a href="#toc1">Introduction</a></li>
+<li class="toc"><a href="#toc2">Document conventions</a></li>
+<li class="toc"><a href="#toc3">Building and installing</a></li>
+<li class="toc"><a href="#toc4">Obtaining the source code</a></li>
+<li class="toc"><a href="#toc5">Source code for <span class="PROGNAME">userchroot</span></a>
+<ul class="toc">
+<li class="toc"><a href="#toc6">Listing 1: Source of <span class="PATH">temp/userchroot.c</span></a></li>
+</ul></li>
+</ul>
+</div>
+
+<div>
+<h2 id="toc2">Document conventions</h2>
+<p>The following markup list will aid you in understanding the markup used in this document:</p>
+  <ul><li>Paths to files are specified as <span class="PATH">/path/to/foo</span>.</li>
+  <li>Environmental variable names are specified as <span class="ENVVAR">PATH</span> (for example).</li>
+  <li>Executable names (which in some case are also program names) are specified using
+    a mono-space font like this: <span class="PROGNAME">rpm</span> and <span class="PROGNAME">apt-get</span>.</li>
+  <li>In command line examples, text in bold is the user input. Results from programs
+    executed are shown with normal weight/emphasis.</li>
+  </ul>
+<h2 id="toc3">Building and installing</h2>
+<p>Using suid bits with programs that you randomly download off the Internet is not a good security practice. Because of this reason, building and installing the software is not automated at all (no autotools, no <span class="PATH">Makefile</span>).</p>
+<p>In order to build you will only need regular <span class="PROGNAME">gcc</span> and the standard C library headers. You will probably need to run <span class="PROGNAME">chmod</span>, <span class="PROGNAME">chown</span> and <span class="PROGNAME">cp</span> in order to install the program usefully.</p>
+<p>The vagueness of this section is intentional.</p>
+<h2 id="toc4">Obtaining the source code</h2>
+<p>For release tar-balls please consult <a href="http://koltsoff.com/pub/userchroot/releases/">the release directory</a>.
+The most recent changelog is also included there.</p>
+
+</div>
+
+<div>
+<p>If you're bothered by the amount of comments in the code, feel free to remove them from your own copy. The comments exist in order for the source code to be of some educative value. Same probably goes with this page, although I will be positively surprised if someone finds the software useful.</p>
+<h2 id="toc5">Source code for <span class="PROGNAME">userchroot</span></h2>
+<p>Feel free to browse the source code and even click on the links. The code presented here is the same as in the latest release (unless the changes are typographical).</p>
+<p>Please notice that even if the source files are placed under GPL, it doesn't mean that this specific page is.</p>
+<pre id="toc6" class="code">
+<span class="linenum">  1</span> <span class="COMMENT">/**</span>
+<span class="linenum">  2</span> <span class="COMMENT"> * A simple program to aid in launching chroot/--rbound programs</span>
+<span class="linenum">  3</span> <span class="COMMENT"> * using the original user credentials. This program is supposed to</span>
+<span class="linenum">  4</span> <span class="COMMENT"> * be used with suid-bit set (chmod u+s).</span>
+<span class="linenum">  5</span> <span class="COMMENT"> *</span>
+<span class="linenum">  6</span> <span class="COMMENT"> * Copyright 2007 Aleksandr Koltsoff (czr@iki.fi)</span>
+<span class="linenum">  7</span> <span class="COMMENT"> * Released under the GNU General Public License version 2 (GPL).</span>
+<span class="linenum">  8</span> <span class="COMMENT"> * Please see provided COPYING file or http://www.gnu.org/licenses/gpl.txt</span>
+<span class="linenum">  9</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 10</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 11</span> <span class="COMMENT"> * The objective of this program is to:</span>
+<span class="linenum"> 12</span> <span class="COMMENT"> * - chroot (argv[1])</span>
+<span class="linenum"> 13</span> <span class="COMMENT"> * - change working directory to (argv[2])</span>
+<span class="linenum"> 14</span> <span class="COMMENT"> * - switch user credentials back to original (since this was</span>
+<span class="linenum"> 15</span> <span class="COMMENT"> *   run via suid-bit)</span>
+<span class="linenum"> 16</span> <span class="COMMENT"> * - exec the target program (argv[3]) (we use direct exec)</span>
+<span class="linenum"> 17</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 18</span> <span class="COMMENT"> * rest of the argv is passed to the target program directly.</span>
+<span class="linenum"> 19</span> <span class="COMMENT"> * environment is passed to the target program (without modifications)</span>
+<span class="linenum"> 20</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 21</span> <span class="COMMENT"> * Parameters:</span>
+<span class="linenum"> 22</span> <span class="COMMENT"> * - argv[1]: new-root (must start with abs-path)</span>
+<span class="linenum"> 23</span> <span class="COMMENT"> * - argv[2]: new working dir, relative to post-chroot</span>
+<span class="linenum"> 24</span> <span class="COMMENT"> * - argv[3]: executable name (related to new working directory) to execve</span>
+<span class="linenum"> 25</span> <span class="COMMENT"> * - argv[4+ if any]: additional parameters passed to target executable</span>
+<span class="linenum"> 26</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 27</span> <span class="COMMENT"> * Never returns success exit code (0), but will return error codes</span>
+<span class="linenum"> 28</span> <span class="COMMENT"> * if checks will fail before getting to the execve-part. In that case</span>
+<span class="linenum"> 29</span> <span class="COMMENT"> * errors will be print out on stderr.</span>
+<span class="linenum"> 30</span> <span class="COMMENT"> *</span>
+<span class="linenum"> 31</span> <span class="COMMENT"> * Exit codes:</span>
+<span class="linenum"> 32</span> <span class="COMMENT"> * 1: problem with command line arguments (usage printed)</span>
+<span class="linenum"> 33</span> <span class="COMMENT"> * 2: no root-privs (won't even attempt to chroot)</span>
+<span class="linenum"> 34</span> <span class="COMMENT"> * 3: chroot target does not exist or cannot be accessed with real</span>
+<span class="linenum"> 35</span> <span class="COMMENT"> *    UID/GID (non-root) (tested with access(2))</span>
+<span class="linenum"> 36</span> <span class="COMMENT"> * 4: chroot-syscall fails</span>
+<span class="linenum"> 37</span> <span class="COMMENT"> * 5: cd / fails (post chroot)</span>
+<span class="linenum"> 38</span> <span class="COMMENT"> * 6: dropping privileges failed</span>
+<span class="linenum"> 39</span> <span class="COMMENT"> * 7: no X_OK on the target (just before execve)</span>
+<span class="linenum"> 40</span> <span class="COMMENT"> * 8: execve failed</span>
+<span class="linenum"> 41</span> <span class="COMMENT"> * 9: somehow execve returned even if it didn't fail (impossible)</span>
+<span class="linenum"> 42</span> <span class="COMMENT"> */</span>
+<span class="linenum"> 43</span> 
+<span class="linenum"> 44</span> <span class="CPP">#include &lt;unistd.h&gt; // {g,s}et{e,}{u,g}id(), execve and other friends</span>
+<span class="linenum"> 45</span> <span class="CPP">#include &lt;sys/types.h&gt;</span>
+<span class="linenum"> 46</span> <span class="CPP">#include &lt;stdio.h&gt;</span>
+<span class="linenum"> 47</span> 
+<span class="linenum" id="ln55"> 48</span> <span class="CPP">#define PROGNAME "userchroot"</span>
+<span class="linenum"> 49</span> 
+<span class="linenum" id="ln57"> 50</span> <span class="CPP">#define DEBUG (0)</span>
+<span class="linenum"> 51</span> 
+<span class="linenum"> 52</span> <span class="COMMENT">// we don't modify our environment on the way to destination program</span>
+<span class="linenum"> 53</span> <span class="TYPE">extern</span> <span class="TYPE">char</span>** environ;
+<span class="linenum"> 54</span> 
+<span class="linenum" id="ln62"> 55</span> <span class="TYPE">int</span> <span class="FUNCTIONNAME">main</span>(<span class="TYPE">int</span> argc, <span class="TYPE">char</span>** argv) {
+<span class="linenum"> 56</span> 
+<span class="linenum"> 57</span>   <span class="COMMENT">// we'll use these to check whether dropping privs succeeds</span>
+<span class="linenum"> 58</span>   gid_t origGid;
+<span class="linenum"> 59</span>   uid_t origUid;
+<span class="linenum"> 60</span> 
+<span class="linenum"> 61</span>   <span class="KEYWORD">if</span> (<a href="#ln57" class="reflinkInt">DEBUG</a>) {
+<span class="linenum"> 62</span>     printf(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": starting (pid=%u)\n"</span>, (<span class="TYPE">unsigned</span>)getpid());
+<span class="linenum"> 63</span>   }
+<span class="linenum"> 64</span> 
+<span class="linenum"> 65</span>   <span class="COMMENT">// check for params</span>
+<span class="linenum"> 66</span>   <span class="KEYWORD">if</span> (argc &lt; 4) {
+<span class="linenum"> 67</span>     fprintf(stderr, <a href="#ln55" class="reflinkInt">PROGNAME</a>
+<span class="linenum"> 68</span>       <span class="STRING">": USAGE: new-root new-cwd exec-name [exec-params]\n"</span>);
+<span class="linenum"> 69</span>     <span class="KEYWORD">return</span> 1;
+<span class="linenum"> 70</span>   }
+<span class="linenum"> 71</span> 
+<span class="linenum"> 72</span>   <span class="KEYWORD">if</span> (<a href="#ln57" class="reflinkInt">DEBUG</a>) {
+<span class="linenum"> 73</span>     <span class="COMMENT">// euid should be root, uid should be the original (assuming u+s)</span>
+<span class="linenum"> 74</span>     printf(<span class="STRING">"uid=%u euid=%u\n"</span>,
+<span class="linenum"> 75</span>       (<span class="TYPE">unsigned</span>)getuid(), (<span class="TYPE">unsigned</span>)geteuid());
+<span class="linenum"> 76</span>     <span class="COMMENT">// if egid != gid, we restore it as well (later)</span>
+<span class="linenum"> 77</span>     printf(<span class="STRING">"gid=%u egid=%u\n"</span>,
+<span class="linenum"> 78</span>       (<span class="TYPE">unsigned</span>)getgid(), (<span class="TYPE">unsigned</span>)getegid());
+<span class="linenum"> 79</span>   }
+<span class="linenum"> 80</span> 
+<span class="linenum"> 81</span>   <span class="COMMENT">// check that we have the proper creds (need root for chroot)</span>
+<span class="linenum"> 82</span>   <span class="KEYWORD">if</span> ((geteuid() != 0) &amp;&amp; (getegid() != 0)) {
+<span class="linenum"> 83</span>     fprintf(stderr, <a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": no root privs (suid missing?)\n"</span>);
+<span class="linenum"> 84</span>     <span class="KEYWORD">return</span> 2;
+<span class="linenum"> 85</span>   }
+<span class="linenum"> 86</span>   <span class="COMMENT">// check for X_OK for target dir (blah, this uses real UID/GID,</span>
+<span class="linenum"> 87</span>   <span class="COMMENT">// not effective. but we can live with it</span>
+<span class="linenum"> 88</span>   <span class="KEYWORD">if</span> (access(argv[1], X_OK) != 0) {
+<span class="linenum"> 89</span>     perror(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": real UID/GID cannot access new root"</span>);
+<span class="linenum"> 90</span>     <span class="KEYWORD">return</span> 3;
+<span class="linenum"> 91</span>   }
+<span class="linenum"> 92</span>   <span class="COMMENT">// do the chroot</span>
+<span class="linenum"> 93</span>   <span class="KEYWORD">if</span> (chroot(argv[1]) != 0) {
+<span class="linenum"> 94</span>     perror(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": failed to chroot"</span>);
+<span class="linenum"> 95</span>     <span class="KEYWORD">return</span> 4;
+<span class="linenum"> 96</span>   }
+<span class="linenum"> 97</span>   <span class="COMMENT">// change working directory to /</span>
+<span class="linenum"> 98</span>   <span class="KEYWORD">if</span> (chdir(argv[2]) != 0) {
+<span class="linenum"> 99</span>     perror(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": failed to switch working directory"</span>);
+<span class="linenum">100</span>     <span class="KEYWORD">return</span> 5;
+<span class="linenum">101</span>   }
+<span class="linenum">102</span>   <span class="KEYWORD">if</span> (<a href="#ln57" class="reflinkInt">DEBUG</a>) printf(<span class="STRING">"Restoring privileges\n"</span>);
+<span class="linenum">103</span>   <span class="COMMENT">// restore privileges (drop root)</span>
+<span class="linenum">104</span>   origUid = getuid();
+<span class="linenum">105</span>   origGid = getgid();
+<span class="linenum">106</span>   setegid(origGid);
+<span class="linenum">107</span>   seteuid(origUid);
+<span class="linenum">108</span>   <span class="COMMENT">// check that the switch was ok</span>
+<span class="linenum">109</span>   <span class="COMMENT">// we do not allow programs to run without the drop being</span>
+<span class="linenum">110</span>   <span class="COMMENT">// successful as this would possibly run the program</span>
+<span class="linenum">111</span>   <span class="COMMENT">// using root-privs, when that is not what we want</span>
+<span class="linenum">112</span>   <span class="KEYWORD">if</span> ((getegid() != origGid) || (geteuid() != origUid)) {
+<span class="linenum">113</span>     fprintf(stderr, <a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": Failed to drop privileges, aborting\n"</span>);
+<span class="linenum">114</span>     <span class="KEYWORD">return</span> 6;
+<span class="linenum">115</span>   }
+<span class="linenum">116</span> 
+<span class="linenum">117</span>   <span class="COMMENT">// aids in debugging problematic cases</span>
+<span class="linenum">118</span>   <span class="KEYWORD">if</span> (<a href="#ln57" class="reflinkInt">DEBUG</a>) {
+<span class="linenum">119</span>     printf(<span class="STRING">"uid=%u euid=%u\n"</span>, (<span class="TYPE">unsigned</span>)getuid(), (<span class="TYPE">unsigned</span>)geteuid());
+<span class="linenum">120</span>     <span class="COMMENT">// if egid != gid, we restore it as well</span>
+<span class="linenum">121</span>     printf(<span class="STRING">"gid=%u egid=%u\n"</span>, (<span class="TYPE">unsigned</span>)getgid(), (<span class="TYPE">unsigned</span>)getegid());
+<span class="linenum">122</span>   }
+<span class="linenum">123</span> 
+<span class="linenum">124</span>   <span class="COMMENT">// verify that it's ok for us to X_OK the target executable</span>
+<span class="linenum">125</span>   <span class="KEYWORD">if</span> (access(argv[3], X_OK) != 0) {
+<span class="linenum">126</span>     perror(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": target missing?"</span>);
+<span class="linenum">127</span>     <span class="KEYWORD">return</span> 7;
+<span class="linenum">128</span>   }
+<span class="linenum">129</span> 
+<span class="linenum">130</span>   <span class="COMMENT">// the command line that the target will get is argv[3] &gt;.</span>
+<span class="linenum">131</span>   <span class="COMMENT">// we also use argv[3] as the executable name to launch.</span>
+<span class="linenum">132</span>   <span class="KEYWORD">if</span> (execve(argv[3], &amp;argv[3], environ) != 0) {
+<span class="linenum">133</span>     perror(<a href="#ln55" class="reflinkInt">PROGNAME</a> <span class="STRING">": failed to execve"</span>);
+<span class="linenum">134</span>     <span class="KEYWORD">return</span> 8;
+<span class="linenum">135</span>   }
+<span class="linenum">136</span> 
+<span class="linenum">137</span>   <span class="COMMENT">// we never should get here.</span>
+<span class="linenum">138</span>   <span class="KEYWORD">return</span> 9;
+<span class="linenum">139</span> }
+</pre><p><span class="listing">Listing 1: Source of <span class="PATH">temp/userchroot.c</span></span></p>
+</div>
+
+<hr />
+<div id="footer">
+<p>Copyright 2006, 2007 Aleksandr Koltsoff - Project URL: <a href="http://koltsoff.com/pub/userchroot/">http://koltsoff.com/pub/userchroot/</a></p>
+<p>
+<a href="http://validator.w3.org/check/referer">Valid XHTML 1.0 (Strict)</a> 
+<a href="http://jigsaw.w3.org/css-validator/check/referer">Valid CSS</a>
+</p>
+</div>
+
+</body>
+</html>

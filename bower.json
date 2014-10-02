@@ -1,0 +1,18 @@
+{
+    "name": "sandbox.propel",
+    "version": "0.1.0",
+    "main": "css/layout.css",
+    "ignore": [
+        ".jshintrc",
+        "**/*.txt"
+    ],
+    "dependencies": {
+        "angular": "~1.3",
+        "angular-bootstrap": "~0.11",
+        "angular-ui-codemirror": "~v0.1",
+        "bootstrap-sass-official": "~3.2",
+        "traceur-runtime": "~0.0"
+    },
+    "devDependencies": {
+    }
+}
