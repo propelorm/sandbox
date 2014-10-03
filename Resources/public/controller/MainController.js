@@ -1,14 +1,10 @@
 export default class MainController {
 
-    constructor($scope, $http) {
+    constructor($scope, $http, $routeParams, $rootScope, $location, EXAMPLES) {
         this.scope = $scope;
         this.http = $http;
-        this.fiddleId = window.config.fiddleId;
-        this.editable = window.config.editable;
-
-        this.examples = {
-            'bookstore': {label: 'Bookstore'}
-        };
+        this.location = $location;
+        this.scope.examples = this.EXAMPLES = EXAMPLES;
 
         this.defaultModel = {
             php: 'echo "Hello World";',
@@ -17,34 +13,41 @@ export default class MainController {
             '\n</database>'
         };
 
-        this.scope.fiddle = {};
-        if (window.model) {
-            this.scope.model = window.model;
-            this.scope.fiddle = window.model;
-        } else {
-            this.scope.model = this.defaultModel;
-        }
-
-        if (!this.scope.model)
-            this.scope.model.title = '';
-
-        this.scope.schemaNeedsUpdate = true;
+        this.scope.fiddle = false;
         this.scope.pageTitle = '';
+        this.scope.editable = false;
+
+        this.scope.$watch('editable', (value) => {
+            this.scope.phpCodemirrorOptions.readOnly = !value;
+            this.scope.schemaCodemirrorOptions.readOnly = !value;
+        });
+
+        $rootScope.$on("$routeChangeSuccess", (event, current) => {
+            if ($routeParams.exampleId) {
+                this.loadExample($routeParams.exampleId);
+            } else {
+                this.loadFiddle($routeParams.fiddleId);
+            }
+        });
+
+        this.scope.model = {};
 
         this.scope.schemaCodemirrorOptions = {
             mode: 'xml',
             lineNumbers: true,
-            styleActiveLine: true
+            styleActiveLine: true,
+            readOnly: !this.editable
         };
 
         this.scope.phpCodemirrorOptions = {
             mode: 'application/x-httpd-php-open',
             matchBrackets: true,
             styleActiveLine: true,
-            lineNumbers: true
+            lineNumbers: true,
+            readOnly: !this.editable
         };
 
-        this.scope.$watch('example', () => this.loadExample());
+        this.scope.$watch('example', (v) => this.openExample(v));
 
         this.scope.$watch('model.title', (value) => {
             if (value) {
@@ -53,15 +56,61 @@ export default class MainController {
                 this.scope.pageTitle = '';
             }
         });
+
+        this.loadMyFiddles();
+    }
+
+    openFiddle(id) {
+        this.open('/' + id);
+    }
+
+    loadMyFiddles(){
+        this.http.get(window._baseUrl + '/my-fiddles')
+            .success((response) => {
+                this.scope.myFiddles = response.data;
+            })
+            .error((response) => {
+                this.scope.myFiddles = [];
+            });
+    }
+
+    loadFiddle(fiddleId) {
+        delete this.scope.notFound;
+        if (fiddleId) {
+            if (this.fiddleId === fiddleId) {
+                return; //don't reload it
+            }
+            this.http.get(window._baseUrl + '/' + fiddleId+'.json')
+                .success((response) => {
+                    this.fiddleId = fiddleId;
+                    this.scope.example = '';
+                    this.scope.fiddle = response.data;
+                    this.scope.model = {
+                        php: this.scope.fiddle.php,
+                        title: this.scope.fiddle.title,
+                        schema: this.scope.fiddle.schema
+                    };
+                    this.scope.editable = this.scope.fiddle.editable;
+                })
+                .error((response) => {
+                    this.scope.notFound = fiddleId;
+                });
+        } else {
+            this.loadNew();
+        }
+    }
+
+    loadNew() {
+        delete this.scope.notFound;
+        this.fiddleId = null;
+        this.scope.example = '';
+        this.scope.model = this.defaultModel;
+        this.scope.editable = true;
     }
 
     newFiddle() {
-        this.retrieveNewFiddleId().success(() => {
-            this.scope.model.php = '';
-            this.scope.model.schema = '';
-            this.scope.model.title = 'New Fiddle';
-            this.run();
-        });
+        this.scope.example = '';
+        this.open('/');
     }
 
     forkFiddle() {
@@ -71,22 +120,41 @@ export default class MainController {
         });
     }
 
-    loadExample() {
-        if (!this.example) return;
+    openExample(exampleId) {
+        if (!exampleId) return;
+        this.open('/example/' + exampleId);
+    }
+
+    loadExample(exampleId) {
+        var example = this.EXAMPLES[exampleId];
+        if (example) {
+            this.scope.example = exampleId;
+            this.scope.fiddle = {};
+            this.fiddleId = null;
+            this.scope.model = {
+                title: example.label,
+                php: example.php,
+                schema: example.schema
+            };
+            this.scope.editable = true;
+        }
+    }
+
+    open(path) {
+        this.location.path(window._baseUrl + path);
     }
 
     retrieveNewFiddleId(){
         this.scope.loading = true;
 
-        var q = this.http.put('/');
+        var q = this.http.put(window._baseUrl + '/');
         q.success((response) => {
             if (response.data) {
                 this.fiddleId = response.data;
-                this.scope.fiddle.id = response.data;
-                this.scope.model.id = response.data;
-                history.pushState({id: response.data}, "Fiddle " + response.data, window._baseUrl + "/" + response.data);
+                this.scope.example = '';
+                this.open('/' + this.fiddleId);
                 this.scope.loading = false;
-                this.editable = true;
+                this.scope.editable = true;
             }
         });
 
@@ -107,6 +175,7 @@ export default class MainController {
             .success((response) => {
                 this.scope.fiddle = response.data;
                 this.scope.loading = false;
+                this.loadMyFiddles();
             })
             .error((response) => {
                 this.scope.error = response;

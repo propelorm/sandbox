@@ -15,3 +15,5 @@ framework:
 fos_rest:
     param_fetcher_listener: true
     body_listener: true
+    routing_loader:
+        include_format: false

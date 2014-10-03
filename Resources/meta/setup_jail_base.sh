@@ -75,6 +75,8 @@ chmod 644 $BASE/etc/passwd $BASE/etc/shadow $BASE/etc/group
 mkdir -p $BASE/etc/php5/cli
 cp $metaDir/jail-php.ini $BASE/etc/php5/cli/php.ini
 
+mkdir -p $BASE/usr/share/
+cp -r /usr/share/zoneinfo $BASE/usr/share/
 
 cp $metaDir/start.sh $BASE/bin/
 cp $metaDir/model-build.sh $BASE/bin/

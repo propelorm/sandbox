@@ -30,14 +30,23 @@ nav {
     border-right: 1px solid #C3DCEB;
     position: fixed;
     height: 100%;
+    overflow: auto;
+}
+
+b, strong {
+    font-weight: 300;
 }
 
 nav > section {
-    padding: 10px;
+    padding: 0 10px;
 }
 
 header {
     margin: 15px 10px;
+}
+
+a, a:link {
+    color: #3A94CA;
 }
 
 
@@ -49,19 +58,80 @@ header {
     background-color: #fafafa;
 }
 
-.loading {
+.overlay {
     position: absolute;
-    left: 50%;
-    margin-left: -50px;
-    top: 50%;
-    margin-top: -50px;
-    color: red;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(#fefefe, 0.7);
+    text-align: center;
+}
+
+.not-found {
+    top: 50px;
+    z-index: 500;
+}
+
+.overlay > div {
+    width: 250px;
+    margin: auto;
+    margin-top: 150px;
+    background-color: #f2f2f2;
+    padding: 50px;
+    box-shadow: 0 0 20px #ddd;
 }
 
 .layout {
     width: 100%;
     height: 100%;
     table-layout: fixed;
+}
+
+.border-box {
+    padding: 15px 0;
+    text-align: center;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.border-box-first {
+    border-bottom: 0;
+    padding-bottom: 10px;
+}
+
+.border-box .no-title {
+    color: gray;
+}
+
+.border-box > .no-items {
+    padding-top: 5px;
+    color: gray;
+    font-size: 13px;
+}
+
+.border-box ul {
+    padding: 0;
+    margin: 0;
+    text-align: left;
+}
+
+.border-box li:hover,
+.border-box li.active {
+    background-color: #e3e3e3;
+    cursor: pointer;
+}
+
+.border-box li .id {
+    color: gray;
+    font-family: 'Source Code Pro', monospace !important;
+}
+
+.border-box li {
+    list-style-type: none;
+    font-size: 12px;
+    border-bottom: 1px dotted #e8e8e8;
+    padding: 3px 2px;
 }
 
 button {
@@ -82,10 +152,6 @@ button:hover {
 td > div {
     margin: 5px;
     border: 1px solid #E0E0E0;
-}
-
-a:link {
-    color: #247BAC;
 }
 
 td > div {
@@ -136,10 +202,12 @@ td > div {
 //    border-right: 1px solid #b7d0df;
 //}
 
-.warning {
+.sticky-information {
     position: absolute;
     bottom: 0;
+    font-size: 13px;
     height: 25px;
+    line-height: 25px;
     background-color: #f7ec16;
     color: #333;
     text-align: center;
@@ -204,10 +272,16 @@ td > div {
 }
 
 ui-codemirror {
-    height: 100%;
     position: absolute;
-    width: 100%;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     display: block;
+}
+
+ui-codemirror.with-sticky {
+    bottom: 25px;
 }
 
 .not-editable .CodeMirror {
@@ -238,4 +312,10 @@ ui-codemirror {
 
 .nav-tabs > li:first-child > a {
     border-left: 0px !important;
+}
+
+
+/* codemirrorr style adjustments */
+.cm-s-default .cm-comment {
+    color: #C5C5C5;
 }

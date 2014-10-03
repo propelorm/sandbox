@@ -8,8 +8,8 @@
     <link rel="shortcut icon" href="{{ asset('bundles/propelsandbox/images/favicon.ico') }}" type="image/x-icon">
     <meta content='width=device-width' name='viewport'>
     <meta name="viewport" content="initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ asset('bundles/propelsandbox/css/layout.css') }}">
     <link rel="stylesheet" href="{{ asset('bundles/propelsandbox/libs/codemirror/lib/codemirror.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('bundles/propelsandbox/css/layout.css') }}">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
     <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:300,400' rel='stylesheet' type='text/css'>
     <script src="{{ asset('bundles/propelsandbox/libs/angular/angular.min.js') }}"></script>
@@ -21,34 +21,44 @@
     <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/php/php.js') }}"></script>
     <script src="{{ asset('bundles/propelsandbox/libs/angular-ui-codemirror/ui-codemirror.min.js') }}"></script>
 
+    <script src="{{ asset('bundles/propelsandbox/libs/angular-route/angular-route.min.js') }}"></script>
     <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap.min.js') }}"></script>
     <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap-tpls.min.js') }}"></script>
     <script src="{{ asset('bundles/propelsandbox/libs/traceur-runtime/traceur-runtime.min.js') }}"></script>
     <script src="{{ asset('bundles/propelsandbox/build/app.js') }}"></script>
     <script>
-        window._baseUrl = {{app.request.getBaseURL()|json_encode|raw}};
-        window.config = {{config|json_encode|raw}}
-        window.model = {{model|json_encode|raw}}
+        window._baseUrl = {{app.request.getBaseURL() | json_encode | raw}};
     </script>
 </head>
 {% verbatim %}
-<body >
+<body>
     <nav>
         <header>
             <img ng-src="bundles/propelsandbox/images/propel-logo.png"/>
         </header>
         <section>
-            Propel Fiddle service - Alpha.
-            <!--<select ng-model="model.example">-->
-                <!--<option selected value="">-- Select Template --</option>-->
-                <!--&lt;!&ndash;<option ng-repeat="example in mainController.examples | toArray" value="{{example.$key}}">&ndash;&gt;-->
-                    <!--&lt;!&ndash;{{example.label}}&ndash;&gt;-->
-                <!--&lt;!&ndash;</option>&ndash;&gt;-->
-            <!--</select>-->
-            <!--<p>-->
-                <!--Your fiddles:-->
-            <!--</p>-->
-            <!--<a ng-repeat="fiddle in myFiddles" ng-click="mainController.load(fiddle.id)">{{fiddle.title}}</a>-->
+            <p><b>Sandbox - Alpha.</b></p>
+
+            <p class="border-box border-box-first">
+                Choose a example
+                <select ng-model="example">
+                    <option value="">-- Select Example --</option>
+                    <option ng-repeat="example in examples | toArray" value="{{example.$key}}">
+                        {{example.label}}
+                    </option>
+                </select>
+            </p>
+            <div class="border-box">
+                Your fiddles
+                <ul>
+                    <li ng-repeat="fiddle in myFiddles" ng-class="{'active': fiddle.id == mainController.fiddleId}" ng-click="mainController.openFiddle(fiddle.id)">
+                        <span class="id">#{{fiddle.id}}</span> -
+                        <span ng-if="fiddle.title">{{fiddle.title}}</span>
+                        <span class="no-title" ng-if="!fiddle.title">No title</span>
+                    </li>
+                </ul>
+                <div class="no-items" ng-if="!myFiddles || !myFiddles.length">No fiddles yet</div>
+            </div>
 
             <p>
                 Found issues? <a href="https://github.com/propelorm/sandbox/issues" target="_blank">Create a issue</a>.
@@ -62,25 +72,30 @@
             <button ng-click="mainController.run()">Save & Run</button>
         </div>
         <div class="app-title">
-            <input placeholder="Enter a Title ..." ng-model="model.title" type="text" />
+            <input placeholder="Enter a Title ..." ng-model="model.title" type="text"/>
         </div>
         <div class="app-left">
-            <div class="app-left-top" ng-class="{'not-editable': !mainController.editable}">
-                <ui-codemirror ui-codemirror-opts="schemaCodemirrorOptions" ng-model="model.schema"></ui-codemirror>
+            <div class="app-left-top" ng-class="{'not-editable': !editable}">
+                <ui-codemirror ng-class="{'with-sticky': fiddle && !editable}"
+                               ui-codemirror-opts="schemaCodemirrorOptions"
+                               ng-model="model.schema"></ui-codemirror>
+                <div ng-if="fiddle && !editable" class="sticky-information">
+                    Not your fiddle. <a href ng-click="mainController.forkFiddle()">Fork to edit</a>
+                </div>
             </div>
             <div class="app-left-bottom">
                 <tabset ng-if="fiddle.databaseInformation && fiddle.databaseInformation.length">
                     <tab ng-repeat="table in fiddle.databaseInformation" heading="{{table.name}} ({{table.count}})">
                         <table class="table table-hover" width="100%" ng-if="table.items">
                             <thead>
-                                <tr>
-                                    <th ng-repeat="column in table.columns">{{column}}</th>
-                                </tr>
+                            <tr>
+                                <th ng-repeat="column in table.columns">{{column}}</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="row in table.items">
-                                   <td ng-repeat="column in table.columns">{{row[column]}}</td>
-                                </tr>
+                            <tr ng-repeat="row in table.items">
+                                <td ng-repeat="column in table.columns">{{row[column]}}</td>
+                            </tr>
                             </tbody>
                         </table>
                     </tab>
@@ -91,8 +106,12 @@
             </div>
         </div>
         <div class="app-right">
-            <div class="app-right-top" ng-class="{'not-editable': !mainController.editable}">
-                <ui-codemirror ui-codemirror-opts="phpCodemirrorOptions" ng-model="model.php"></ui-codemirror>
+            <div class="app-right-top" ng-class="{'not-editable': !editable}">
+                <ui-codemirror ng-class="{'with-sticky': fiddle && !editable}" ui-codemirror-opts="phpCodemirrorOptions"
+                               ng-model="model.php"></ui-codemirror>
+                <div ng-if="fiddle && !editable" class="sticky-information">
+                    Not your fiddle. <a href ng-click="mainController.forkFiddle()">Fork to edit</a>
+                </div>
             </div>
             <div class="app-right-bottom">
                 <tabset>
@@ -115,8 +134,10 @@
                 </tabset>
             </div>
         </div>
-        <div ng-if="loading" class="loading">
-            Loading ...
+        <div ng-if="notFound" class="overlay not-found">
+            <div>
+                Fiddle <i>{{notFound}}</i> not found. <a href ng-click="mainController.newFiddle()">New Fiddle</a>
+            </div>
         </div>
     </div>
 </body>
