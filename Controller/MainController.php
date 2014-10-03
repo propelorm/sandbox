@@ -142,6 +142,7 @@ class MainController extends Controller
                         $zipArchive->addFile($dir . $file, $zipDir . $file);
                     }
                 }
+                closedir($dh);
             }
         }
     }
