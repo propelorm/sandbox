@@ -109,5 +109,15 @@ class Fiddle extends BaseFiddle
         return parent::setDatabaseInformation($this->arrayToString($v));
     }
 
+    public function getConfigBuildOutput()
+    {
+        return $this->stringToArray(parent::getConfigBuildOutput());
+    }
+
+    public function setConfigBuildOutput($v)
+    {
+        return parent::setConfigBuildOutput($this->arrayToString($v));
+    }
+
 
 }

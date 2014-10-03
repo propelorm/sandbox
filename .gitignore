@@ -1,3 +1,7 @@
 /Resources/public/libs
+/Resources/public/build
+/node_modules
 /Model/Base
 /Model/Map
+/.sass-cache
+/vendor

@@ -1,0 +1,27 @@
+{
+  "name": "PropelSandbox",
+  "version": "0.1.0",
+  "description": "sandbox.propelorm.org",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/propelorm/sandbox.git"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-nodeunit": "~0.4.1",
+    "grunt-contrib-uglify": "~0.5.0",
+    "grunt-contrib-sass": "~0.8",
+    "grunt-shell": "~1",
+    "traceur": "~0.0.66",
+    "grunt-contrib-watch": "~0.6"
+  },
+  "author": "Marc J. Schmidt office@marcjschmidt.de",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/propelorm/sandbox/issues"
+  }
+}

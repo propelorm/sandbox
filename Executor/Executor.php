@@ -19,6 +19,20 @@ class Executor
     protected $db;
 
     /**
+     * Disables all checks and fires all commands again and again.
+     *
+     * @var bool
+     */
+    protected $debug = false;
+
+    /**
+     * Defines whether prepareRuntimeConfig should call config:convert or not
+     *
+     * @var bool
+     */
+    protected $needConfigConvertCall = false;
+
+    /**
      * @param $redis
      */
     public function __construct(\Predis\Client $redis, $db, $vendorDir)
@@ -44,13 +58,19 @@ class Executor
         }
 
         $this->prepareChroot($fiddle);
+        $directory = $this->getDirectory($fiddle);
+        $logFile = $directory . '/home/sandbox/propel_log.txt';
+        file_put_contents($logFile, '');
 
+        $this->prepareDatabase($fiddle);
         $this->buildDatabaseSchema($fiddle);
         $this->prepareRuntimeConfig($fiddle);
 
         $scriptOutput = $this->executeInJail($fiddle);
         $fiddle->setScriptOutput($scriptOutput);
         $this->extractDbInformation($fiddle);
+
+        $fiddle->setLogOutput(file_get_contents($logFile));
     }
 
     protected function prepareChroot(Fiddle $fiddle)
@@ -69,13 +89,11 @@ class Executor
 \$autoloader->add('', __DIR__ . '/generated-classes/');
 require './generated-conf/config.php';
 
-
 $php
 EOF
         );
         file_put_contents($directory . '/home/sandbox/schema.xml', $fiddle->getSchema());
 
-        $this->prepareDatabase($fiddle);
     }
 
     /**
@@ -90,7 +108,7 @@ EOF
         $fiddleEscaped = $this->db->quote($fiddle->getId(), \PDO::PARAM_STR);
         $fiddleId = $this->db->quoteIdentifier($fiddle->getId());
 
-        if (file_exists($directory . '/home/sandbox/propel.yml')) {
+        if (!$this->debug && file_exists($directory . '/home/sandbox/propel.yml')) {
             return false;
         }
 
@@ -120,6 +138,8 @@ EOF
             )
         );
 
+        $this->needConfigConvertCall = true;
+
         $this->db->executeQuery(
             sprintf(
                 "GRANT USAGE, ALTER, CREATE, DELETE, DROP, INDEX, INSERT, SELECT, UPDATE ON %s.* TO %s@'localhost'",
@@ -127,7 +147,6 @@ EOF
                 $fiddleEscaped
             )
         );
-
 
         $propelConfig = <<<EOF
 propel:
@@ -141,6 +160,11 @@ propel:
               password: $password
               attributes:
   runtime:
+      log:
+          defaultLogger:
+              type: stream
+              path: ./propel_log.txt
+              level: 100
       defaultConnection: default
       connections:
           - default
@@ -159,12 +183,12 @@ EOF;
     {
         $directory = $this->getDirectory($fiddle);
 
-        if (file_exists($directory . '/home/sandbox/generated-conf/')) {
+        if (!$this->needConfigConvertCall && !$this->debug && file_exists($directory . '/home/sandbox/generated-conf/config.php')) {
             return;
         }
 
-        $this->executeInJail($fiddle, '/usr/bin/php /vendor/propel/propel/bin/propel config:convert');
-
+        $output = $this->executeInJail($fiddle, '/bin/build-config.sh');
+        $fiddle->setConfigBuildOutput($output);
     }
 
     /**
@@ -176,7 +200,7 @@ EOF;
         $currentHash = $this->getSchemaHash($fiddle);
         $directory = $this->getDirectory($fiddle);
 
-        if ($lastBuiltHash !== $currentHash) {
+        if ($this->debug || $lastBuiltHash !== $currentHash) {
             $buildOutput = $this->executeInJail($fiddle, '/bin/sql-build.sh');
             $fiddle->setSqlBuildOutput($buildOutput);
 
@@ -184,10 +208,10 @@ EOF;
             $fiddle->setModelBuildOutput($buildOutput);
         }
 
-        if (file_exists($directory . '/home/sandbox/generated-sql/')) {
+        if ($this->debug || file_exists($directory . '/home/sandbox/generated-sql/')) {
             $insertOutput = $this->executeInJail(
                 $fiddle,
-                '/usr/bin/php /vendor/propel/propel/bin/propel sql:insert -vv'
+                '/bin/sql-insert.sh'
             );
             $fiddle->setSqlInsertOutput($insertOutput);
         } else {
@@ -206,11 +230,12 @@ EOF;
         foreach ($tables as $table) {
             $table = current($table);
             $tableIdentifier = $identifier . '.' . $this->db->quoteIdentifier($table);
+            $columns = $this->db->fetchAll(sprintf('SHOW COLUMNS FROM %s', $tableIdentifier));
             $items = $this->db->fetchAll(sprintf('SELECT * FROM %s LIMIT 1000', $tableIdentifier));
             $result[] = [
                 'name' => $table,
                 'count' => count($items),
-                'columns' => $items ? array_keys($items[0]) : [],
+                'columns' => $columns,
                 'items' => $items ?: false
             ];
         }
@@ -237,9 +262,23 @@ EOF;
      * @param Fiddle $fiddle
      * @return string
      */
-    protected function getDirectory(Fiddle $fiddle)
+    public function getDirectory(Fiddle $fiddle)
     {
         return '/tmp/propelsandbox/chroots/' . $fiddle->getId();
+    }
+
+    /**
+     * @param Fiddle $fiddle
+     * @return boolean
+     */
+    public function isUpdate2Date(Fiddle $fiddle)
+    {
+        $directory = $this->getDirectory($fiddle);
+        if (!file_exists($directory . '/home/sandbox/propel.yml')) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

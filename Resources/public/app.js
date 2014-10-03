@@ -1,6 +1,6 @@
 import angular from './angular';
 
-var app = angular.module('propelFiddle', ['ngRoute', 'ui.codemirror', 'ui.bootstrap']);
+var app = angular.module('propelSandbox', ['ngRoute', 'ui.codemirror', 'ui.bootstrap']);
 
 import MainController from './controller/MainController';
 import toArray from './filters/toArray';
@@ -21,3 +21,44 @@ app.config(['$routeProvider', '$locationProvider', function($routeProvider, $loc
 }]);
 
 app.run(function($route) {});
+
+// copy&pasted since maintaincer has no versions tagged and requires angular v1.2
+app.directive('uiLadda', ['$timeout', function($timeout) {
+    return {
+        link: function(scope, element, attrs) {
+            var ladda = window.Ladda.create(element[0]);
+            scope.$watch(attrs.uiLadda, function(newVal) {
+                if (angular.isNumber(newVal)) {
+                    if (newVal >= 0 && newVal < 1) {
+                        if (!ladda.isLoading()) {
+                            ladda.start();
+                            $timeout(function() {
+                                ladda.setProgress(newVal);
+                            }, 300);
+                        }
+                        else {
+                            ladda.setProgress(newVal);
+                        }
+                    }
+                    else {
+                        if (ladda.isLoading()) {
+                            ladda.stop();
+                        }
+                    }
+                }
+                else {
+                    if (newVal) {
+                        if (!ladda.isLoading()) {
+                            ladda.start();
+                        }
+                    }
+                    else {
+                        if (ladda.isLoading()) {
+                            ladda.stop();
+                        }
+                    }
+                }
+            }, true);
+        }
+    };
+}]);

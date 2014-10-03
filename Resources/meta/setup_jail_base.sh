@@ -81,6 +81,8 @@ cp -r /usr/share/zoneinfo $BASE/usr/share/
 cp $metaDir/start.sh $BASE/bin/
 cp $metaDir/model-build.sh $BASE/bin/
 cp $metaDir/sql-build.sh $BASE/bin/
+cp $metaDir/sql-insert.sh $BASE/bin/
+cp $metaDir/build-config.sh $BASE/bin/
 
 
 mkdir -p $BASE/dev

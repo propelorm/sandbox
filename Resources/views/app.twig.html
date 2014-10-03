@@ -1,31 +1,18 @@
 <!DOCTYPE html>
-<html ng-app="propelFiddle" ng-controller="MainController as mainController">
+<html ng-app="propelSandbox" ng-controller="MainController as mainController">
 <head>
     <title>{{ '{{pageTitle}}' }}Propel Sandbox/Fiddle</title>
     <base href="{{ asset('') }}">
     <meta name="language" content="en">
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <link rel="shortcut icon" href="{{ asset('bundles/propelsandbox/images/favicon.ico') }}" type="image/x-icon">
-    <meta content='width=device-width' name='viewport'>
-    <meta name="viewport" content="initial-scale=1.0">
-    <link rel="stylesheet" href="{{ asset('bundles/propelsandbox/libs/codemirror/lib/codemirror.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ asset('bundles/propelsandbox/css/layout.css') }}">
+
+    <link rel="stylesheet" type="text/css" href="{{ asset('bundles/propelsandbox/build/app.css') }}">
+    <script src="{{ asset('bundles/propelsandbox/build/complete-app.js') }}"></script>
+
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
     <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:300,400' rel='stylesheet' type='text/css'>
-    <script src="{{ asset('bundles/propelsandbox/libs/angular/angular.min.js') }}"></script>
 
-    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/lib/codemirror.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/xml/xml.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/htmlmixed/htmlmixed.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/clike/clike.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/codemirror/mode/php/php.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/angular-ui-codemirror/ui-codemirror.min.js') }}"></script>
-
-    <script src="{{ asset('bundles/propelsandbox/libs/angular-route/angular-route.min.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap.min.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/angular-bootstrap/ui-bootstrap-tpls.min.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/libs/traceur-runtime/traceur-runtime.min.js') }}"></script>
-    <script src="{{ asset('bundles/propelsandbox/build/app.js') }}"></script>
     <script>
         window._baseUrl = {{app.request.getBaseURL() | json_encode | raw}};
     </script>
@@ -40,7 +27,7 @@
             <p><b>Sandbox - Alpha.</b></p>
 
             <p class="border-box border-box-first">
-                Choose a example
+                Load a example
                 <select ng-model="example">
                     <option value="">-- Select Example --</option>
                     <option ng-repeat="example in examples | toArray" value="{{example.$key}}">
@@ -68,8 +55,13 @@
     <div class="app">
         <div class="app-actions">
             <button ng-click="mainController.newFiddle()">New</button>
-            <button ng-click="mainController.forkFiddle()">Fork</button>
-            <button ng-click="mainController.run()" ng-class="{'disabled': !editable}">Save & Run</button>
+            <button ng-click="mainController.forkFiddle()" class="ladda-button" data-style="expand-left" ui-ladda="forking">Fork</button>
+            <button ng-click="mainController.run()" class="ladda-button" data-style="expand-left" ui-ladda="saving"
+                    ng-class="{'disabled': !editable}">Save & Run</button>
+            <button ng-click="mainController.downloadFiddle()"
+                    tooltip-placement="bottom" tooltip="Download a ready to use zip file!"
+                    ng-class="{'disabled': !mainController.downloadPossible()}"
+                    class="ladda-button download-fiddle" data-style="expand-left" ui-ladda="downloading">Download as zip</button>
         </div>
         <div class="app-title">
             <input placeholder="Enter a Title ..." ng-model="model.title" type="text"/>
@@ -86,15 +78,15 @@
             <div class="app-left-bottom">
                 <tabset ng-if="fiddle.databaseInformation && fiddle.databaseInformation.length">
                     <tab ng-repeat="table in fiddle.databaseInformation" heading="{{table.name}} ({{table.count}})">
-                        <table class="table table-hover" width="100%" ng-if="table.items">
+                        <table class="table table-hover result-table" width="100%" ng-if="table.items">
                             <thead>
                             <tr>
-                                <th ng-repeat="column in table.columns">{{column}}</th>
+                                <th ng-repeat="column in table.columns">{{column.Field}} <span>{{column.Type}}</span></th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr ng-repeat="row in table.items">
-                                <td ng-repeat="column in table.columns">{{row[column]}}</td>
+                                <td ng-repeat="column in table.columns">{{row[column.Field]}}</td>
                             </tr>
                             </tbody>
                         </table>
@@ -102,6 +94,11 @@
                 </tabset>
                 <div ng-if="!fiddle.databaseInformation || !fiddle.databaseInformation.length" class="no-tables">
                     No Tables found.
+                </div>
+                <div ng-if="!fiddle" class="overlay overlay-not-run">
+                    <div>
+                        Press <a href ng-click="mainController.run()">Save & Run</a> to generate models, database tables and script output.
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,6 +116,13 @@
                         <div class="output" ng-bind="fiddle.scriptOutput.output"></div>
                         <div class="error" ng-bind="fiddle.scriptOutput.error"></div>
                     </tab>
+                    <tab heading="Log">
+                        <div class="output" ng-bind="fiddle.logOutput"></div>
+                    </tab>
+                    <tab heading="Config ({{fiddle.modelBuildOutput.time*1000|number: 0}}ms)">
+                        <div class="output" ng-bind="fiddle.configBuildOutput.output"></div>
+                        <div class="error" ng-bind="fiddle.configBuildOutput.error"></div>
+                    </tab>
                     <tab heading="Model ({{fiddle.modelBuildOutput.time*1000|number: 0}}ms)">
                         <div class="output" ng-bind="fiddle.modelBuildOutput.output"></div>
                         <div class="error" ng-bind="fiddle.modelBuildOutput.error"></div>
@@ -132,11 +136,40 @@
                         <div class="error" ng-bind="fiddle.sqlInsertOutput.error"></div>
                     </tab>
                 </tabset>
+                <div ng-if="!fiddle" class="overlay overlay-not-run">
+                    <div>
+                        Press <a href ng-click="mainController.run()">Save & Run</a> to generate models, database tables and script output.
+                    </div>
+                </div>
             </div>
         </div>
         <div ng-if="notFound" class="overlay not-found">
             <div>
                 Fiddle <i>{{notFound}}</i> not found. <a href ng-click="mainController.newFiddle()">New Fiddle</a>
+            </div>
+        </div>
+        <div ng-if="downloadZip" class="overlay">
+            <div>
+                <h3 ng-if="downloadingZip">Preparing your zip ...</h3>
+                <div ng-if="!downloadingZip && !downloadZipError">
+                    <p>Your zip file has been generated.</p>
+                    <a ng-href="/downloads/{{zipFileName}}" target="_blank">download {{zipFileName}}</a><br />
+                    ({{zipFileSize/1024|number:1}} kilobytes)
+                    <h3>Next steps</h3>
+                    <div class="info">
+                        1. Extract the archive<br />
+                        2. Run 'composer update' inside the<br />
+                        3. Change 'propel.yml' database connection settings <br />
+                        4. Run './vendor/propel/propel/bin/propel config:convert'
+                    </div>
+                </div>
+                <div ng-if="downloadZipError">
+                    <h3>Oops, sorry</h3>
+                    {{downloadZipError}}
+                </div>
+                <p>
+                    <button ng-click="mainController.cancelDownloadZip()">Close</button>
+                </p>
             </div>
         </div>
     </div>

@@ -1,8 +1,9 @@
 export default class MainController {
 
-    constructor($scope, $http, $routeParams, $rootScope, $location, EXAMPLES) {
+    constructor($scope, $http, $routeParams, $q, $rootScope, $location, EXAMPLES) {
         this.scope = $scope;
         this.http = $http;
+        this.q = $q;
         this.location = $location;
         this.scope.examples = this.EXAMPLES = EXAMPLES;
 
@@ -76,14 +77,14 @@ export default class MainController {
 
     loadFiddle(fiddleId) {
         delete this.scope.notFound;
+        if (fiddleId && this.fiddleId === fiddleId) {
+            return; //don't reload it
+        }
+        this.fiddleId = fiddleId;
+        this.scope.example = '';
         if (fiddleId) {
-            if (this.fiddleId === fiddleId) {
-                return; //don't reload it
-            }
             this.http.get(window._baseUrl + '/' + fiddleId+'.json')
                 .success((response) => {
-                    this.fiddleId = fiddleId;
-                    this.scope.example = '';
                     this.scope.fiddle = response.data;
                     this.scope.model = {
                         php: this.scope.fiddle.php,
@@ -93,6 +94,7 @@ export default class MainController {
                     this.scope.editable = this.scope.fiddle.editable;
                 })
                 .error((response) => {
+                    delete this.fiddleId;
                     this.scope.notFound = fiddleId;
                 });
         } else {
@@ -114,10 +116,19 @@ export default class MainController {
     }
 
     forkFiddle() {
-        this.retrieveNewFiddleId().success(() =>  {
+        this.scope.forking = true;
+        var promise = this.retrieveNewFiddleId();
+
+        promise.success(() =>  {
+            if (!this.scope.model.title) this.scope.model.title = '';
             this.scope.model.title += ' Fork';
             this.run();
+            this.scope.forking = false;
+        }).error(() => {
+            this.scope.forking = false;
         });
+
+        return promise;
     }
 
     openExample(exampleId) {
@@ -125,11 +136,80 @@ export default class MainController {
         this.open('/example/' + exampleId);
     }
 
+    downloadFiddle() {
+        if (!this.fiddleId && !this.scope.example) {
+            //no fiddle or a example has ben loaded
+            return;
+        }
+
+        this.scope.downloadZip = true; //show dialog
+        this.scope.downloadingZip = true; //indicate we're loading now everything
+
+        this.downloadZipCanceller = this.q.defer();
+        delete this.scope.downloadZipError;
+
+        if (!this.fiddleId && this.scope.example) {
+            console.log('it is a example, run first');
+            //its a example, we need to run it first. run() forks it already
+            this.run()
+                .then(() => this.downloadFiddle())
+                .catch(() => {
+                    this.scope.downloadingZip = false;
+                    this.scope.downloadZipError = 'Could not fork the fiddle';
+                });
+            return;
+        }
+        if (this.fiddleId && this.fiddle && !this.fiddle.editable) {
+            console.log('not editable');
+            //we need to fork it first
+            this.forkFiddle()
+                .then(() => this.downloadFiddle())
+                .catch(() => {
+                    this.scope.downloadingZip = false;
+                    this.scope.downloadZipError = 'Could not fork the fiddle';
+                });
+            return;
+        }
+
+        if (this.fiddleId && !this.scope.fiddle) {
+            console.log('not run yet');
+            //we need to save&run first
+            this.run()
+                .then(() => this.downloadFiddle())
+                .catch(() => {
+                    this.scope.downloadingZip = false;
+                    this.scope.downloadZipError = 'Could not run the fiddle';
+                });
+            return;
+        }
+
+        this.http.post(window._baseUrl + '/prepare-download/' + this.fiddleId, {
+            timeout: this.downloadZipCanceller.promise
+        }).success((response) => {
+            this.scope.zipFileName = response.data.name;
+            this.scope.zipFileSize = response.data.size;
+            this.scope.downloadingZip = false;
+        }).error((response) => {
+            this.scope.downloadingZip = false;
+            this.scope.downloadZipError = 'Could not download zip file';
+        })
+    }
+
+    cancelDownloadZip() {
+        this.scope.downloadZip = false;
+        this.downloadZipCanceller.resolve(); //cancel running download request
+    }
+
+    downloadPossible() {
+        return this.fiddleId || this.scope.example;
+    }
+
     loadExample(exampleId) {
         var example = this.EXAMPLES[exampleId];
         if (example) {
             this.scope.example = exampleId;
-            this.scope.fiddle = {};
+            this.scope.fiddle = false;
+
             this.fiddleId = null;
             this.scope.model = {
                 title: example.label,
@@ -147,8 +227,8 @@ export default class MainController {
     retrieveNewFiddleId(){
         this.scope.loading = true;
 
-        var q = this.http.put(window._baseUrl + '/');
-        q.success((response) => {
+        var promise = this.http.put(window._baseUrl + '/');
+        promise.success((response) => {
             if (response.data) {
                 this.fiddleId = response.data;
                 this.scope.example = '';
@@ -158,7 +238,7 @@ export default class MainController {
             }
         });
 
-        return q;
+        return promise;
     }
 
     run() {
@@ -169,21 +249,31 @@ export default class MainController {
         }
 
         this.scope.loading = true;
+        this.scope.saving = true;
 
         if (!this.fiddleId) {
-            this.retrieveNewFiddleId().success(() => this.run());
-            return;
+            var q = this.q.defer();
+            this.retrieveNewFiddleId().success(() => {
+                this.run()
+                    .success((v) => q.resolve(v))
+                    .error((v) => q.reject(v))
+            }).error(() => q.reject());
+            return q.promise;
         }
 
-        this.http.post(window._baseUrl + '/' + this.fiddleId, data)
-            .success((response) => {
+        var promise = this.http.post(window._baseUrl + '/' + this.fiddleId, data);
+        promise.success((response) => {
                 this.scope.fiddle = response.data;
                 this.scope.loading = false;
+                this.scope.saving = false;
                 this.loadMyFiddles();
             })
             .error((response) => {
                 this.scope.error = response;
                 this.scope.loading = false;
+                this.scope.saving = false;
             });
+
+        return promise;
     }
 }

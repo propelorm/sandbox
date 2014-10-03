@@ -8,11 +8,14 @@
     <column name="schema" type="LONGVARCHAR" />
     <column name="php" type="LONGVARCHAR" />
 
+    <column name="log_output" type="LONGVARCHAR" />
+
     <column name="script_output" type="LONGVARCHAR" />
     <column name="sql_build_output" type="LONGVARCHAR" />
     <column name="sql_insert_output" type="LONGVARCHAR" />
     <column name="model_build_output" type="LONGVARCHAR" />
     <column name="schema_migration_output" type="LONGVARCHAR" />
+    <column name="config_build_output" type="LONGVARCHAR" />
 
     <column name="database_information" type="LONGVARCHAR" />
 

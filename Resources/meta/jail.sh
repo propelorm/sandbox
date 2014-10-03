@@ -41,5 +41,12 @@ do
     chmod 770 $file
 done
 
+logFile="$cwd/home/sandbox/propel_log.txt"
+if [ ! -f $logFile ]; then
+    touch $logFile
+fi
+chown sandbox:www-data $logFile
+chmod g+w $logFile
+
 #echo "entering jail $cwd: $2";
 su sandbox -c "userchroot $cwd /home/sandbox $2"

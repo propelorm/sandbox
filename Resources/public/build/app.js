@@ -9,10 +9,11 @@ System.register("../angular", [], function() {
 System.register("../controller/MainController", [], function() {
   "use strict";
   var __moduleName = "../controller/MainController";
-  var MainController = function MainController($scope, $http, $routeParams, $rootScope, $location, EXAMPLES) {
+  var MainController = function MainController($scope, $http, $routeParams, $q, $rootScope, $location, EXAMPLES) {
     var $__0 = this;
     this.scope = $scope;
     this.http = $http;
+    this.q = $q;
     this.location = $location;
     this.scope.examples = this.EXAMPLES = EXAMPLES;
     this.defaultModel = {
@@ -74,13 +75,13 @@ System.register("../controller/MainController", [], function() {
     loadFiddle: function(fiddleId) {
       var $__0 = this;
       delete this.scope.notFound;
+      if (fiddleId && this.fiddleId === fiddleId) {
+        return;
+      }
+      this.fiddleId = fiddleId;
+      this.scope.example = '';
       if (fiddleId) {
-        if (this.fiddleId === fiddleId) {
-          return;
-        }
         this.http.get(window._baseUrl + '/' + fiddleId + '.json').success((function(response) {
-          $__0.fiddleId = fiddleId;
-          $__0.scope.example = '';
           $__0.scope.fiddle = response.data;
           $__0.scope.model = {
             php: $__0.scope.fiddle.php,
@@ -89,6 +90,7 @@ System.register("../controller/MainController", [], function() {
           };
           $__0.scope.editable = $__0.scope.fiddle.editable;
         })).error((function(response) {
+          delete $__0.fiddleId;
           $__0.scope.notFound = fiddleId;
         }));
       } else {
@@ -108,21 +110,83 @@ System.register("../controller/MainController", [], function() {
     },
     forkFiddle: function() {
       var $__0 = this;
-      this.retrieveNewFiddleId().success((function() {
+      this.scope.forking = true;
+      var promise = this.retrieveNewFiddleId();
+      promise.success((function() {
+        if (!$__0.scope.model.title)
+          $__0.scope.model.title = '';
         $__0.scope.model.title += ' Fork';
         $__0.run();
+        $__0.scope.forking = false;
+      })).error((function() {
+        $__0.scope.forking = false;
       }));
+      return promise;
     },
     openExample: function(exampleId) {
       if (!exampleId)
         return;
       this.open('/example/' + exampleId);
     },
+    downloadFiddle: function() {
+      var $__0 = this;
+      if (!this.fiddleId && !this.scope.example) {
+        return;
+      }
+      this.scope.downloadZip = true;
+      this.scope.downloadingZip = true;
+      this.downloadZipCanceller = this.q.defer();
+      if (!this.fiddleId && this.scope.example) {
+        console.log('it is a example, run first');
+        this.run().then((function() {
+          return $__0.downloadFiddle();
+        })).catch((function() {
+          $__0.scope.downloadingZip = false;
+          $__0.scope.downloadZipError = 'Could not fork the fiddle';
+        }));
+        return;
+      }
+      if (this.fiddleId && this.fiddle && !this.fiddle.editable) {
+        console.log('not editable');
+        this.forkFiddle().then((function() {
+          return $__0.downloadFiddle();
+        })).catch((function() {
+          $__0.scope.downloadingZip = false;
+          $__0.scope.downloadZipError = 'Could not fork the fiddle';
+        }));
+        return;
+      }
+      if (this.fiddleId && !this.scope.fiddle) {
+        console.log('not run yet');
+        this.run().then((function() {
+          return $__0.downloadFiddle();
+        })).catch((function() {
+          $__0.scope.downloadingZip = false;
+          $__0.scope.downloadZipError = 'Could not run the fiddle';
+        }));
+        return;
+      }
+      this.http.post(window._baseUrl + '/prepare-download/' + this.fiddleId, {timeout: this.downloadZipCanceller.promise}).success((function(response) {
+        $__0.scope.zipFileName = response.data.name;
+        $__0.scope.zipFileSize = response.data.size;
+        $__0.scope.downloadingZip = false;
+      })).error((function(response) {
+        $__0.scope.downloadingZip = false;
+        $__0.scope.downloadZipError = 'Could not download zip file';
+      }));
+    },
+    cancelDownloadZip: function() {
+      this.scope.downloadZip = false;
+      this.downloadZipCanceller.resolve();
+    },
+    downloadPossible: function() {
+      return this.fiddleId || this.scope.example;
+    },
     loadExample: function(exampleId) {
       var example = this.EXAMPLES[$traceurRuntime.toProperty(exampleId)];
       if (example) {
         this.scope.example = exampleId;
-        this.scope.fiddle = {};
+        this.scope.fiddle = false;
         this.fiddleId = null;
         this.scope.model = {
           title: example.label,
@@ -138,8 +202,8 @@ System.register("../controller/MainController", [], function() {
     retrieveNewFiddleId: function() {
       var $__0 = this;
       this.scope.loading = true;
-      var q = this.http.put(window._baseUrl + '/');
-      q.success((function(response) {
+      var promise = this.http.put(window._baseUrl + '/');
+      promise.success((function(response) {
         if (response.data) {
           $__0.fiddleId = response.data;
           $__0.scope.example = '';
@@ -148,7 +212,7 @@ System.register("../controller/MainController", [], function() {
           $__0.scope.editable = true;
         }
       }));
-      return q;
+      return promise;
     },
     run: function() {
       var $__0 = this;
@@ -157,20 +221,32 @@ System.register("../controller/MainController", [], function() {
         return;
       }
       this.scope.loading = true;
+      this.scope.saving = true;
       if (!this.fiddleId) {
+        var q = this.q.defer();
         this.retrieveNewFiddleId().success((function() {
-          return $__0.run();
+          $__0.run().success((function(v) {
+            return q.resolve(v);
+          })).error((function(v) {
+            return q.reject(v);
+          }));
+        })).error((function() {
+          return q.reject();
         }));
-        return;
+        return q.promise;
       }
-      this.http.post(window._baseUrl + '/' + this.fiddleId, data).success((function(response) {
+      var promise = this.http.post(window._baseUrl + '/' + this.fiddleId, data);
+      promise.success((function(response) {
         $__0.scope.fiddle = response.data;
         $__0.scope.loading = false;
+        $__0.scope.saving = false;
         $__0.loadMyFiddles();
       })).error((function(response) {
         $__0.scope.error = response;
         $__0.scope.loading = false;
+        $__0.scope.saving = false;
       }));
+      return promise;
     }
   }, {});
   var $__default = MainController;
@@ -229,7 +305,7 @@ System.register("../app", [], function() {
   "use strict";
   var __moduleName = "../app";
   var angular = System.get("../angular").default;
-  var app = angular.module('propelFiddle', ['ngRoute', 'ui.codemirror', 'ui.bootstrap']);
+  var app = angular.module('propelSandbox', ['ngRoute', 'ui.codemirror', 'ui.bootstrap']);
   var MainController = System.get("../controller/MainController").default;
   var toArray = System.get("../filters/toArray").default;
   var examples = System.get("../examples").default;
@@ -243,6 +319,39 @@ System.register("../app", [], function() {
     $routeProvider.when(window._baseUrl + '/', {}).when(window._baseUrl + '/:fiddleId', {}).when(window._baseUrl + '/example/:exampleId', {});
   }]);
   app.run(function($route) {});
+  app.directive('uiLadda', ['$timeout', function($timeout) {
+    return {link: function(scope, element, attrs) {
+        var ladda = window.Ladda.create(element[0]);
+        scope.$watch(attrs.uiLadda, function(newVal) {
+          if (angular.isNumber(newVal)) {
+            if (newVal >= 0 && newVal < 1) {
+              if (!ladda.isLoading()) {
+                ladda.start();
+                $timeout(function() {
+                  ladda.setProgress(newVal);
+                }, 300);
+              } else {
+                ladda.setProgress(newVal);
+              }
+            } else {
+              if (ladda.isLoading()) {
+                ladda.stop();
+              }
+            }
+          } else {
+            if (newVal) {
+              if (!ladda.isLoading()) {
+                ladda.start();
+              }
+            } else {
+              if (ladda.isLoading()) {
+                ladda.stop();
+              }
+            }
+          }
+        }, true);
+      }};
+  }]);
   return {};
 });
 System.get("../app" + '');

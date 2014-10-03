@@ -58,6 +58,95 @@ class MainController extends Controller
     }
 
     /**
+     * @Route("/prepare-download/{fiddle}", requirements={"fiddle" = "[a-zA-Z0-9]{7}"})
+     * @Method("POST")
+     */
+    public function downloadFiddleAction($fiddle, Request $request)
+    {
+        $fiddle = FiddleQuery::create()->findPk($fiddle);
+        if (!$fiddle) {
+            throw $this->createNotFoundException('The fiddle does not exist. [json]');
+        }
+
+        /** @var \PropelSandbox\Executor\Executor $executor */
+        $executor = $this->container->get('propelsandbox.executor');
+        if (!$executor->isUpdate2Date($fiddle)) {
+            $executor->execute($fiddle);
+        }
+
+        $directory = $executor->getDirectory($fiddle);
+
+        $webDir = $this->get('kernel')->getRootDir() . '/../web';
+        $zipName = 'fiddle-' . $fiddle->getId() . ".zip";
+        $path = $webDir . '/downloads/' . $zipName;
+
+        if (!is_dir(dirname($path))) {
+            mkdir(dirname($path), 0770, true);
+        }
+
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
+        $zip = new \ZipArchive();
+        $zip->open($path, \ZipArchive::CREATE);
+
+        $this->addFolderToZip($directory . '/home/sandbox/generated-classes/', $zip, 'generated-classes/');
+        $this->addFolderToZip($directory . '/home/sandbox/generated-sql/', $zip, 'generated-sql/');
+        foreach (['propel_log.txt', 'propel.yml', 'schema.xml', 'script.php'] as $file) {
+            $zip->addFile($directory . '/home/sandbox/' . $file, $file);
+        }
+//
+//        $vendors = ['propel/propel', 'composer', 'monolog', 'nikic', 'psr', 'symfony'];
+//        foreach ($vendors as $vendor) {
+//            addFolderToZip($directory . '/vendor/'. $vendor . '/', $zip, 'vendor/' . $vendor . '/');
+//        }
+//        $zip->addFile($directory . '/vendor/autoload.php', 'vendor/autoload.php');
+
+        $zip->addFile(__DIR__ . '/../Resources/meta/package-composer.json', 'composer.json');
+
+        $zip->close();
+
+        $result = [
+            'name' => $zipName,
+            'path' => '/downloads/' . $zipName,
+            'size' => filesize($path)
+        ];
+
+        return $result;
+    }
+
+    /**
+     * @param string $dir with leading slash
+     * @param \ZipArchive $zipArchive
+     * @param string $zipDir with leading slash or empty
+     */
+    protected function addFolderToZip($dir, \ZipArchive $zipArchive, $zipDir = '')
+    {
+        if (is_dir($dir)) {
+            if ($dh = opendir($dir)) {
+                //Add the directory
+                if (!empty($zipDir)) {
+                    $zipArchive->addEmptyDir($zipDir);
+                }
+                // Loop through all the files
+                while (($file = readdir($dh)) !== false) {
+                    //If it's a folder, run the function again!
+                    if (!is_file($dir . $file)) {
+                        // Skip parent and root directories
+                        if (($file !== ".") && ($file !== "..")) {
+                            $this->addFolderToZip($dir . $file . "/", $zipArchive, $zipDir . $file . "/");
+                        }
+                    } else {
+                        // Add the files
+                        $zipArchive->addFile($dir . $file, $zipDir . $file);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * @Route("/my-fiddles")
      * @Method("GET")
      */

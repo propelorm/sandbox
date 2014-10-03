@@ -1,15 +1,3 @@
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/variables";
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/mixins";
-
-// Reset and dependencies
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/normalize";
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/print";
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/glyphicons";
-
-// Core CSS
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/navs";
-@import "../libs/bootstrap-sass-official/assets/stylesheets/bootstrap/tables";
-
 html, body {
     padding: 0;
     margin: 0;
@@ -51,7 +39,7 @@ a, a:link {
 
 
 .app {
-    position: fixed;
+    position: absolute;
     height: 100%;
     left: 200px;
     right: 0;
@@ -66,19 +54,23 @@ a, a:link {
     bottom: 0;
     background-color: rgba(#fefefe, 0.7);
     text-align: center;
+    z-index: 500;
 }
 
 .not-found {
     top: 50px;
-    z-index: 500;
+}
+
+.info {
+    color: #aab3c2;
 }
 
 .overlay > div {
     width: 250px;
     margin: auto;
-    margin-top: 150px;
+    margin-top: 50px;
     background-color: #f2f2f2;
-    padding: 50px;
+    padding: 40px;
     box-shadow: 0 0 20px #ddd;
 }
 
@@ -140,6 +132,13 @@ a, a:link {
     padding: 50px 0;
 }
 
+.result-table th span {
+    color: silver;
+    font-size: 12px;
+    font-weight: 300;
+}
+
+
 button {
     background-color: #c3dceb;
     border: 0px;
@@ -154,6 +153,7 @@ button:hover {
     background-color: #b9cfde;
 }
 
+button[disabled],
 button.disabled,
 button.disabled:hover,
 button.disabled:active {
@@ -161,6 +161,11 @@ button.disabled:active {
     color: #aab3c2;
     cursor: default;
     outline: 0;
+}
+
+button.download-fiddle {
+    float: right;
+    background-color: #c9e2f1;
 }
 
 td > div {
@@ -214,6 +219,13 @@ td > div {
 //    float: left;
 //    margin: 0;
 //    border-right: 1px solid #b7d0df;
+//}
+
+//.app-right-bottom textarea {
+//    border: 0;
+//    display: block;
+//    outline: 0;
+//    font-family: 'Source Code Pro', monospace !important;
 //}
 
 .sticky-information {
@@ -281,7 +293,7 @@ td > div {
     font-family: 'Source Code Pro', monospace !important;
 }
 
-.app-output .error {
+.error {
     color: red;
 }
 
@@ -332,4 +344,28 @@ ui-codemirror.with-sticky {
 /* codemirrorr style adjustments */
 .cm-s-default .cm-comment {
     color: #C5C5C5;
+}
+
+
+/* responsive */
+@media (max-width: $screen-md-min) {
+    .app-left, .app-right {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+    }
+    .app-left > div, .app-right > div {
+        height: auto;
+    }
+
+    ui-codemirror {
+        position: relative;
+    }
+
+    .app {
+        overflow: auto;
+        min-width: 500px;
+    }
 }
