@@ -69,7 +69,7 @@
                 <ui-codemirror ui-codemirror-opts="schemaCodemirrorOptions" ng-model="model.schema"></ui-codemirror>
             </div>
             <div class="app-left-bottom">
-                <tabset>
+                <tabset ng-if="fiddle.databaseInformation && fiddle.databaseInformation.length">
                     <tab ng-repeat="table in fiddle.databaseInformation" heading="{{table.name}} ({{table.count}})">
                         <table class="table table-hover" width="100%" ng-if="table.items">
                             <thead>
@@ -85,6 +85,9 @@
                         </table>
                     </tab>
                 </tabset>
+                <div ng-if="!fiddle.databaseInformation || !fiddle.databaseInformation.length">
+                    No Tables found.
+                </div>
             </div>
         </div>
         <div class="app-right">

@@ -16,12 +16,11 @@ System.register("../controller/MainController", [], function() {
     this.fiddleId = window.config.fiddleId;
     this.editable = window.config.editable;
     this.examples = {'bookstore': {label: 'Bookstore'}};
-    this.defaultSchema = '<database name="default">\n' + '   <table name="book"></table>\n' + '</database>';
-    this.defaultPhp = 'use Propel\\Runtime\\Propel\n' + '\n' + '$book = new Book();';
     this.defaultModel = {
       php: 'echo "Hello World";',
-      schema: '<database></database>'
+      schema: '<database name="default">\n' + '\n' + '\n</database>'
     };
+    this.scope.fiddle = {};
     if (window.model) {
       this.scope.model = window.model;
       this.scope.fiddle = window.model;
