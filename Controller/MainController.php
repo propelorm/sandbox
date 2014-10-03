@@ -70,7 +70,7 @@ class MainController extends Controller
 
         /** @var \PropelSandbox\Executor\Executor $executor */
         $executor = $this->container->get('propelsandbox.executor');
-        if (!$executor->isUpdate2Date($fiddle)) {
+        if (!$executor->isUp2Date($fiddle)) {
             $executor->execute($fiddle);
         }
 

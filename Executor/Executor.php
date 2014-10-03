@@ -271,7 +271,7 @@ EOF;
      * @param Fiddle $fiddle
      * @return boolean
      */
-    public function isUpdate2Date(Fiddle $fiddle)
+    public function isUp2Date(Fiddle $fiddle)
     {
         $directory = $this->getDirectory($fiddle);
         if (!file_exists($directory . '/home/sandbox/propel.yml')) {
