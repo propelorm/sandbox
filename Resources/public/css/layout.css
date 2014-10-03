@@ -1279,6 +1279,11 @@ a, a:link {
   border-bottom: 1px dotted #e8e8e8;
   padding: 3px 2px; }
 
+.no-tables {
+  color: gray;
+  text-align: center;
+  padding: 50px 0; }
+
 button {
   background-color: #c3dceb;
   border: 0px;
@@ -1290,6 +1295,14 @@ button {
 
 button:hover {
   background-color: #b9cfde; }
+
+button.disabled,
+button.disabled:hover,
+button.disabled:active {
+  background-color: #c9e2f1;
+  color: #aab3c2;
+  cursor: default;
+  outline: 0; }
 
 td > div {
   margin: 5px;

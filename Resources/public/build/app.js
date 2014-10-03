@@ -153,6 +153,9 @@ System.register("../controller/MainController", [], function() {
     run: function() {
       var $__0 = this;
       var data = this.scope.model;
+      if (!this.scope.editable) {
+        return;
+      }
       this.scope.loading = true;
       if (!this.fiddleId) {
         this.retrieveNewFiddleId().success((function() {

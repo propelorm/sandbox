@@ -164,6 +164,10 @@ export default class MainController {
     run() {
         var data = this.scope.model;
 
+        if (!this.scope.editable) {
+            return;
+        }
+
         this.scope.loading = true;
 
         if (!this.fiddleId) {

@@ -69,7 +69,7 @@
         <div class="app-actions">
             <button ng-click="mainController.newFiddle()">New</button>
             <button ng-click="mainController.forkFiddle()">Fork</button>
-            <button ng-click="mainController.run()">Save & Run</button>
+            <button ng-click="mainController.run()" ng-class="{'disabled': !editable}">Save & Run</button>
         </div>
         <div class="app-title">
             <input placeholder="Enter a Title ..." ng-model="model.title" type="text"/>
@@ -100,7 +100,7 @@
                         </table>
                     </tab>
                 </tabset>
-                <div ng-if="!fiddle.databaseInformation || !fiddle.databaseInformation.length">
+                <div ng-if="!fiddle.databaseInformation || !fiddle.databaseInformation.length" class="no-tables">
                     No Tables found.
                 </div>
             </div>
