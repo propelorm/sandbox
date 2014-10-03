@@ -8,7 +8,7 @@
 ```
 useradd sandbox --home /home/sandbox
 echo 'www-data ALL= NOPASSWD: /var/www/propelsandbox/src/PropelSandbox/Resources/meta/jail.sh' >> /etc/sudoers // or sudo visudo
-iptables -I OUTPUT -j REJECT -m owner --gid-owner sandbox
+iptables -I OUTPUT -j REJECT -m owner --gid-owner sandbox #dont forget to do this on server boot, use iptables-persistent
 ```
 4. make sure `/var/www/propelsandbox/src/PropelSandbox/Resources/meta/jail.sh` is only writeable by root!
 5. fire `bower install` in `src/PropelSandbox`
